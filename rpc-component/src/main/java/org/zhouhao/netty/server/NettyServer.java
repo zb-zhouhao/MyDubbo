@@ -13,6 +13,7 @@ import org.zhouhao.coder.CommonDecoder;
 import org.zhouhao.coder.CommonEncoder;
 import org.zhouhao.serializer.JsonSerializer;
 import org.zhouhao.RpcServer;
+import org.zhouhao.serializer.KyroSerializer;
 
 /**
  * netty服务端（NettyServerHandler为工作线程）:
@@ -47,7 +48,7 @@ public class NettyServer implements RpcServer {
                         protected void initChannel(SocketChannel ch) throws Exception {
                             ChannelPipeline pipeline = ch.pipeline();
                             //给pipeline管道设置处理器
-                            pipeline.addLast(new CommonEncoder(new JsonSerializer()))
+                            pipeline.addLast(new CommonEncoder(new KyroSerializer()))
                                     .addLast(new CommonDecoder())
                                     .addLast(new NettyServerHandler());
 

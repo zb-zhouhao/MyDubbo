@@ -16,6 +16,7 @@ import org.zhouhao.request.RpcRequest;
 import org.zhouhao.response.RpcResponse;
 import org.zhouhao.serializer.JsonSerializer;
 import org.zhouhao.netty.server.NettyServerHandler;
+import org.zhouhao.serializer.KyroSerializer;
 
 /**
  * Netty客户端
@@ -51,7 +52,7 @@ public class NettyClient implements RpcClient {
                         //添加客户端通道的处理器
                         ChannelPipeline pipeline = ch.pipeline();
                         pipeline.addLast(new CommonDecoder())
-                                .addLast(new CommonEncoder(new JsonSerializer()))
+                                .addLast(new CommonEncoder(new KyroSerializer()))
                                 .addLast(new NettyClientHandler());
                     }
                 });
