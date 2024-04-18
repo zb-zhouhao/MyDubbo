@@ -3,12 +3,11 @@ package org.zhouhao;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zhouhao.request.RpcRequest;
-import org.zhouhao.response.RpcResponse;
-import org.zhouhao.socket.client.SocketRpcClient;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.UUID;
 
 public class RpcNettyClientDynamicProxy implements InvocationHandler {
     private static final Logger logger = LoggerFactory.getLogger(RpcNettyClientDynamicProxy.class);
@@ -33,7 +32,8 @@ public class RpcNettyClientDynamicProxy implements InvocationHandler {
 //        SocketRpcClient rpcClient = new SocketRpcClient();
 //        return ((RpcResponse) rpcClient.sendRequest(rpcRequest, host, port)).getData();
         logger.info("call method {}#{}", method.getDeclaringClass().getName(), method.getName());
-        RpcRequest rpcRequest = new RpcRequest(method.getDeclaringClass().getName(),
+        RpcRequest rpcRequest = new RpcRequest(UUID.randomUUID().toString(),
+                method.getDeclaringClass().getName(),
                 method.getName(), args, method.getParameterTypes());
         return rpcClient.sendRequest(rpcRequest);
     }

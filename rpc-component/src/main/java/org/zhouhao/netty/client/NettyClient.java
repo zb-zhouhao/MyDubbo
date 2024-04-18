@@ -10,13 +10,22 @@ import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zhouhao.RpcClient;
+import org.zhouhao.RpcMessageChecker;
 import org.zhouhao.coder.CommonDecoder;
 import org.zhouhao.coder.CommonEncoder;
+import org.zhouhao.exception.RpcException;
 import org.zhouhao.request.RpcRequest;
 import org.zhouhao.response.RpcResponse;
+import org.zhouhao.serializer.CommonSerializer;
 import org.zhouhao.serializer.JsonSerializer;
 import org.zhouhao.netty.server.NettyServerHandler;
 import org.zhouhao.serializer.KyroSerializer;
+import org.zhouhao.service.NacosServiceRegistry;
+import org.zhouhao.service.ServiceRegistry;
+import org.zhouhao.status.RpcError;
+
+import java.net.InetSocketAddress;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Netty客户端
@@ -27,13 +36,13 @@ import org.zhouhao.serializer.KyroSerializer;
 public class NettyClient implements RpcClient {
     private static final Logger logger = LoggerFactory.getLogger(NettyClient.class);
 
-    private String host;
-    private int port;
-    private static final Bootstrap bootstrap;
 
-    public NettyClient(String host, int port) {
-        this.host = host;
-        this.port = port;
+    private static final Bootstrap bootstrap;
+    private final ServiceRegistry serviceRegistry;
+    private CommonSerializer serializer;
+
+    public NettyClient() {
+        this.serviceRegistry = new NacosServiceRegistry();
     }
 
     static {
@@ -61,12 +70,19 @@ public class NettyClient implements RpcClient {
 
     @Override
     public Object sendRequest(RpcRequest rpcRequest) {
+        if(serializer == null) {
+            logger.error("未设置序列化器");
+            throw new RpcException(RpcError.SERIALIZER_NOT_FOUND);
+        }
+        AtomicReference<Object> result = new AtomicReference<>(null);
         try {
+            InetSocketAddress inetSocketAddress = serviceRegistry.lookupService(rpcRequest.getInterfaceName());
+            Channel channel = ChannelProvider.get(inetSocketAddress, serializer);
+
             //连接服务端
-            ChannelFuture future = bootstrap.connect(host, port).sync();
-            logger.info("client connect server {}:{}", host, port);
-            Channel channel = future.channel();
-            if (channel != null) {
+//            ChannelFuture future = bootstrap.connect(host, port).sync();
+//            logger.info("client connect server {}:{}", host, port);
+            if(channel.isActive()) {
                 channel.writeAndFlush(rpcRequest).addListener(future1 -> {
                     if (future1.isSuccess()) {
                         logger.info(String.format("客户端发送消息: %s", rpcRequest.toString()));
@@ -74,16 +90,22 @@ public class NettyClient implements RpcClient {
                         logger.error("发送消息时有错误发生: ", future1.cause());
                     }
                 });
-                //对通道关闭进行监听
                 channel.closeFuture().sync();
-                AttributeKey<RpcResponse> key = AttributeKey.valueOf("rpcResponse");
+                AttributeKey<RpcResponse> key = AttributeKey.valueOf("rpcResponse" + rpcRequest.getRequestId());
                 RpcResponse rpcResponse = channel.attr(key).get();
-                System.out.printf(rpcResponse.toString());
-                return rpcResponse.getData();
+                RpcMessageChecker.check(rpcRequest, rpcResponse);
+                result.set(rpcResponse.getData());
+            } else {
+                System.exit(0);
             }
         } catch (InterruptedException e) {
             logger.error("send messg error: ", e);
         }
-        return null;
+        return result.get();
+    }
+
+    @Override
+    public void setSerializer(CommonSerializer serializer) {
+        this.serializer = serializer;
     }
 }
