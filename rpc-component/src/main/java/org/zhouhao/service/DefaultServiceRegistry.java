@@ -3,7 +3,7 @@ package org.zhouhao.service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zhouhao.exception.RpcException;
-import org.zhouhao.exception.statuscode.RpcError;
+import org.zhouhao.status.RpcError;
 
 import java.util.Map;
 import java.util.Set;
@@ -21,15 +21,16 @@ public class DefaultServiceRegistry implements ServiceRegistry {
 
     /**
      * 注册服务
-     * k, v : 实现的接口，注册的服务类
+     * k, v : 实现的接口全类名，注册的服务类
      * @param service
      * @param <T>
      */
     @Override
-    public <T> void register(T service) {
+    public synchronized <T> void register(T service) {
         String serviceName = service.getClass().getCanonicalName();
         if (registeredService.contains(serviceName))
             return;
+        //添加的是实现类的xxxImpl的全类名
         registeredService.add(serviceName);
         Class<?>[] interfaces = service.getClass().getInterfaces();
         if (interfaces.length == 0) {
@@ -42,7 +43,7 @@ public class DefaultServiceRegistry implements ServiceRegistry {
     }
 
     @Override
-    public Object getService(String serviceName) {
+    public synchronized Object getService(String serviceName) {
         Object service = serviceMap.get(serviceName);
         if (service == null) {
             throw new RpcException(RpcError.SERVICE_NOT_FOUND);

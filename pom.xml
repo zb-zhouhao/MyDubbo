@@ -10,6 +10,8 @@
     <packaging>pom</packaging>
     <modules>
         <module>rpc-component</module>
+        <module>rpc-util</module>
+        <module>rpc-test</module>
     </modules>
 
     <properties>
